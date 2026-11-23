@@ -1,0 +1,491 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>신용·대차 CHECK</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Nanum+Gothic:wght@400;700;800&display=swap" rel="stylesheet">
+<script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.1/chart.umd.min.js"></script>
+<style>
+:root{
+  --orange:#F58220; --navy:#043B72; --ink:#1d2433; --sub:#5d6675; --line:#e3e6eb;
+  --bg:#ffffff; --panel:#f6f7f9; --up:#d6322c; --down:#1d5fd1; --upbg:#fdecec; --downbg:#eaf1fc;
+  box-sizing:border-box;
+  padding-top:env(safe-area-inset-top,0px); padding-bottom:env(safe-area-inset-bottom,0px);
+}
+*,*:before,*:after{box-sizing:inherit}
+body{margin:0;background:var(--bg);color:var(--ink);
+  font-family:"Nanum Gothic","Apple SD Gothic Neo","Malgun Gothic",Dotum,sans-serif;font-size:17px;line-height:1.5}
+.wrap{max-width:1180px;margin:0 auto;padding:22px 16px 44px}
+header{border-bottom:3px solid var(--orange);padding-bottom:14px;margin-bottom:18px;
+  display:flex;flex-wrap:wrap;align-items:flex-end;justify-content:space-between;gap:10px}
+h1{margin:0;font-size:30px;font-weight:800;color:var(--navy);letter-spacing:-.5px}
+h1 small{display:block;font-size:15px;font-weight:400;color:var(--sub);letter-spacing:0;margin-top:4px}
+.asof{font-size:15px;color:var(--sub);text-align:right;line-height:1.6}
+.asof b{color:var(--ink);font-size:18px}
+
+/* 상단 용어 패널 */
+.guide{border:2px solid var(--navy);border-radius:6px;padding:16px 16px 12px;margin-bottom:18px}
+.guide>h2{margin:0 0 12px;font-size:21px;font-weight:800;color:var(--navy)}
+.gcards{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:12px}
+.gc{background:var(--panel);border-radius:6px;padding:14px 14px 12px}
+.gc h3{margin:0;font-size:22px;font-weight:800;color:var(--ink)}
+.gc h3 span{font-size:14px;font-weight:400;color:var(--sub);margin-left:6px}
+.gc .what{font-size:16px;margin:6px 0 10px;color:var(--ink)}
+.gc .who{font-size:14px;color:var(--sub);margin:-6px 0 10px}
+.dir{display:flex;align-items:center;gap:8px;padding:8px 10px;border-radius:4px;font-size:17px;margin-top:6px}
+.dir.dn{background:var(--downbg)} .dir.up{background:var(--upbg)}
+.dir .arr{font-weight:800;white-space:nowrap}
+.dir .res{margin-left:auto;font-weight:800;white-space:nowrap}
+.dir.dn .res{color:var(--down)} .dir.up .res{color:var(--up)}
+.gc.soon{position:relative}
+.gc.soon .tag{position:absolute;top:12px;right:12px;font-size:13px;background:#fff;border:1px solid var(--line);border-radius:3px;padding:1px 7px;color:var(--sub)}
+.gnote{font-size:14px;color:var(--sub);margin:12px 0 0;line-height:1.7}
+.gnote b{color:var(--ink)}
+
+/* 요약 */
+.sum{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:12px;margin-bottom:16px}
+.sum div{background:var(--panel);border-left:4px solid var(--navy);padding:10px 14px}
+.sum span{display:block;font-size:14px;color:var(--sub)}
+.sum strong{font-size:24px;font-weight:800;white-space:nowrap}
+.sum em{font-style:normal;font-size:15px;font-weight:700;margin-left:6px}
+
+/* 컨트롤 */
+.kinds{display:flex;justify-content:center;gap:12px;margin:8px 0 18px}
+.kinds button{flex:0 1 260px;border:2px solid var(--navy);background:#fff;color:var(--navy);font:inherit;font-size:24px;font-weight:800;
+  padding:14px 10px 10px;border-radius:10px;cursor:pointer;line-height:1.2}
+.kinds button small{display:block;font-size:14px;font-weight:400;margin-top:5px;color:var(--sub)}
+.kinds button:hover{background:#f2f6fb}
+.kinds button[aria-selected="true"]{background:var(--navy);color:#fff;box-shadow:0 4px 0 var(--orange)}
+.kinds button[aria-selected="true"] small{color:#dbe6f3}
+.sortbar{background:var(--panel);border-radius:8px;padding:12px 14px;margin-bottom:12px}
+.sortbar .t{font-size:17px;font-weight:800;color:var(--navy);margin-right:10px}
+.sortbar .seg button{font-size:17px;padding:8px 14px}
+.sortbar p{margin:8px 0 0;font-size:14px;color:var(--sub)}
+.more{display:block;margin:14px auto 0;border:1px solid var(--navy);background:#fff;color:var(--navy);font:inherit;font-size:17px;font-weight:700;padding:9px 28px;border-radius:20px;cursor:pointer}
+.more:hover{background:#f2f6fb}
+#detail{display:none;border:2px solid var(--orange);border-radius:8px;padding:14px 16px 12px;margin-bottom:16px;background:#fffaf5}
+#detail.on{display:block}
+#detail .dh{display:flex;align-items:baseline;gap:10px;flex-wrap:wrap;margin-bottom:10px}
+#detail .dh h3{margin:0;font-size:21px;font-weight:800;color:var(--navy)}
+#detail .dh .x{margin-left:auto;border:1px solid var(--line);background:#fff;font:inherit;font-size:15px;padding:4px 12px;border-radius:4px;cursor:pointer}
+.ctrl{display:flex;flex-wrap:wrap;gap:8px 14px;align-items:center;margin-bottom:14px}
+.ctrl label{font-size:15px;color:var(--sub)}
+.seg{display:inline-flex;border:1px solid var(--navy);border-radius:4px;overflow:hidden}
+.seg button{border:0;background:#fff;color:var(--navy);padding:7px 13px;font:inherit;font-size:16px;cursor:pointer}
+.seg button+button{border-left:1px solid var(--navy)}
+.seg button[aria-pressed="true"]{background:var(--navy);color:#fff;font-weight:700}
+button:focus-visible,input:focus-visible,tr.row:focus-visible{outline:3px solid var(--orange);outline-offset:1px}
+input[type=search]{flex:1;min-width:160px;padding:7px 12px;border:1px solid var(--line);border-radius:4px;font:inherit;font-size:16px}
+
+/* 좌우 표 */
+.boards{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:18px;align-items:start}
+.boards.single{grid-template-columns:minmax(0,1fr)}
+.board h2{margin:0;font-size:19px;font-weight:800;padding:9px 12px;display:flex;justify-content:space-between;gap:8px;flex-wrap:wrap}
+.board h2 small{font-size:14px;font-weight:700}
+.board.inc h2{background:var(--downbg);color:var(--down)}
+.board.dec h2{background:var(--upbg);color:var(--up)}
+.board.find h2{background:var(--panel);color:var(--navy)}
+table{width:100%;border-collapse:collapse;font-size:16px}
+th{color:var(--sub);font-weight:700;font-size:14px;padding:8px 5px;text-align:right;border-bottom:1px solid var(--line);white-space:nowrap;line-height:1.25}
+td{padding:8px 5px;text-align:right;border-bottom:1px solid var(--line);white-space:nowrap}
+th:nth-child(1),td:nth-child(1){text-align:center;width:34px}
+th:nth-child(2),td:nth-child(2){text-align:left}
+td.nm{max-width:0;width:34%;overflow:hidden;text-overflow:ellipsis;font-weight:700}
+td.nm .mk{color:var(--sub);font-size:12px;font-weight:400;margin-left:4px}
+tr.row{cursor:pointer}
+tr.row:hover td{background:#fafbfc}
+tr.row.open td{background:#fff6ee}
+tr.row.open td.nm{color:var(--orange)}
+td.rk{color:var(--sub)}
+td.key{font-weight:800}
+.up{color:var(--up)} .down{color:var(--down)} .muted{color:var(--sub)}
+.new{font-size:12px;border:1px solid var(--line);border-radius:3px;padding:0 5px;color:var(--sub)}
+.dgrid{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:6px 12px;margin-bottom:10px}
+.dgrid div{font-size:14px;color:var(--sub)}
+.dgrid b{display:block;font-size:17px;color:var(--ink)}
+.cw{position:relative;height:210px;background:#fff;border:1px solid var(--line);padding:6px}
+.dlink{display:inline-block;margin-top:8px;font-size:14px;color:var(--navy)}
+.chartbox{border:1px solid var(--line);padding:12px;margin-top:22px}
+.chartbox h2{font-size:18px;margin:0 0 8px;color:var(--navy)}
+.chartwrap{position:relative;height:230px}
+.note{font-size:14px;color:var(--sub);margin-top:18px;line-height:1.75}
+.note b{color:var(--ink)}
+.empty{padding:28px 10px;text-align:center;color:var(--sub)}
+.soonbox{border:1px dashed var(--line);padding:26px 16px;text-align:center;color:var(--sub);font-size:16px;line-height:1.8}
+@media (max-width:900px){
+  .gcards{grid-template-columns:minmax(0,1fr)}
+  .kinds{gap:6px}
+  .kinds button{flex:1 1 0;font-size:18px;padding:11px 4px 8px}
+  .kinds button small{font-size:12px}
+  .sum{grid-template-columns:repeat(2,minmax(0,1fr))}
+  .boards{grid-template-columns:minmax(0,1fr)}
+  .dgrid{grid-template-columns:repeat(2,minmax(0,1fr))}
+}
+@media (max-width:520px){
+  h1{font-size:25px}
+  .asof{text-align:left}
+  .c-ratio2,.c-amt,.c-st{display:none}
+  .s-ratio .c-ratio2,.s-amt .c-amt,.s-streak .c-st{display:table-cell}
+  .sortbar .seg{display:grid;grid-template-columns:1fr 1fr;width:100%;margin-top:8px}
+  .sortbar .seg button+button{border-left:0}
+  .sortbar .seg button:nth-child(even){border-left:1px solid var(--navy)}
+  .sortbar .seg button:nth-child(n+3){border-top:1px solid var(--navy)}
+  .sortbar .seg button{font-size:16px;padding:9px 6px}
+  table{font-size:15px}
+  .sum strong{font-size:20px}
+  .sum em{display:block;margin-left:0}
+}
+</style>
+</head>
+<body>
+<div class="wrap">
+<header>
+  <h1>신용·대차 CHECK<small>Credit-Loan-Korea · 국내 전 종목 대차·공매도 잔고 증감 순위</small></h1>
+  <div class="asof" id="asof">불러오는 중…</div>
+</header>
+
+<section class="guide" aria-labelledby="g-title">
+  <h2 id="g-title">먼저 보세요: 세 가지 잔고의 뜻과 주가 방향</h2>
+  <div class="gcards">
+    <div class="gc">
+      <h3>대차<span>貸借 · 주식 빌려주기</span></h3>
+      <p class="what">기관·외국인이 공매도 등에 쓰려고 <b>빌려 둔 주식</b>. 아직 팔지 않은 "장전된 실탄"입니다.</p>
+      <div class="dir dn"><span class="arr">▲ 늘면</span><span>공매도 준비 물량 증가</span><span class="res">하락 압력</span></div>
+      <div class="dir up"><span class="arr">▼ 줄면</span><span>빌린 주식 상환</span><span class="res">상승 여건</span></div>
+    </div>
+    <div class="gc">
+      <h3>공매도<span>空賣渡 · 빌려서 판 주식</span></h3>
+      <p class="what">빌린 주식을 <b>실제로 팔고 아직 되사서 갚지 않은</b> 수량. 하락에 건 돈입니다.</p>
+      <div class="dir dn"><span class="arr">▲ 늘면</span><span>하락 베팅 확대</span><span class="res">하락 압력</span></div>
+      <div class="dir up"><span class="arr">▼ 줄면</span><span>되사서 갚는 매수</span><span class="res">상승 여건</span></div>
+    </div>
+    <div class="gc soon">
+      <span class="tag">종목별 준비 중</span>
+      <h3>신용융자<span>信用 · 빚내서 산 주식</span></h3>
+      <p class="what">개인이 증권사 돈을 빌려 <b>산</b> 주식. 주가가 빠지면 반대매매(강제 처분)로 쏟아집니다.</p>
+      <div class="dir dn"><span class="arr">▲ 늘면</span><span>빚투 과열, 잠재 매물</span><span class="res">하락 위험</span></div>
+      <div class="dir up"><span class="arr">▼ 줄면</span><span>매물 부담 해소</span><span class="res">상승 여건</span></div>
+    </div>
+  </div>
+  <p class="gnote">
+    <b>세 잔고 모두 "늘면 하락 쪽, 줄면 상승 쪽"</b>으로 읽습니다. 그래서 아래 표는 <b class="down">파란 표 = 잔고 증가(하락 압력)</b>, <b class="up">빨간 표 = 잔고 감소(상승 여건)</b>입니다.<br>
+    대차 ≠ 공매도: 빌린 주식을 모두 파는 것은 아니므로 대차 잔고가 공매도 잔고보다 큽니다. 공매도 잔고가 큰 종목이 호재로 급등하면 되사기 매수가 몰리는 <b>숏스퀴즈</b>가 생길 수 있습니다.<br>
+    위 해석은 일반론이며 확정 신호가 아닙니다. 주가 열(%)과 함께 보세요.
+  </p>
+</section>
+
+<div class="sum" id="sum"></div>
+
+<div class="kinds" role="tablist" aria-label="잔고 종류">
+  <button role="tab" data-kind="lend" aria-selected="true">대차 잔고<small>빌려 둔 주식</small></button>
+  <button role="tab" data-kind="short" aria-selected="false">공매도 잔고<small>빌려서 판 주식</small></button>
+  <button role="tab" data-kind="credit" aria-selected="false">신용융자<small>빚투 · 준비 중</small></button>
+</div>
+
+<div id="ctrlArea">
+<div class="sortbar">
+  <span class="t">정렬 기준</span>
+  <div class="seg" id="segS">
+    <button data-v="pct" aria-pressed="true">변화율 큰 순(%)</button>
+    <button data-v="ratio" aria-pressed="false">비율 변화 큰 순(%p)</button>
+    <button data-v="amt" aria-pressed="false">증감 금액 큰 순</button>
+    <button data-v="streak" aria-pressed="false">연속일 긴 순</button>
+  </div>
+  <p id="sortDesc"></p>
+</div>
+<div class="ctrl">
+  <label>기간</label>
+  <div class="seg" id="segP"></div>
+</div>
+<div class="ctrl">
+  <label>시장</label>
+  <div class="seg" id="segM">
+    <button data-v="all" aria-pressed="true">전체</button>
+    <button data-v="K" aria-pressed="false">코스피</button>
+    <button data-v="Q" aria-pressed="false">코스닥</button>
+  </div>
+  <label>최소 잔고</label>
+  <div class="seg" id="segF">
+    <button data-v="1e8" aria-pressed="true">1억</button>
+    <button data-v="1e9" aria-pressed="false">10억</button>
+    <button data-v="1e10" aria-pressed="false">100억</button>
+  </div>
+  <input type="search" id="q" placeholder="종목명 또는 코드 검색" aria-label="종목 검색">
+</div>
+</div>
+
+<div id="detail" aria-live="polite"></div>
+<div class="boards" id="boards"><div class="empty">데이터를 불러오는 중입니다…</div></div>
+<button class="more" id="moreBtn" style="display:none"></button>
+
+<div class="chartbox" id="totBox">
+  <h2 id="totTitle">시장 전체 잔고 추이</h2>
+  <div class="chartwrap"><canvas id="totChart" aria-label="시장 전체 대차·공매도 잔고 추이"></canvas></div>
+</div>
+
+<div class="note">
+  <b>열 설명</b> · 종목을 누르면 표 위에 60일 잔고·주가 차트가 열립니다 · 상장주식 대비: 잔고 수량 ÷ 상장주식수 · 변화율: 선택 기간 동안 잔고 수량 증감률 · 비율 변화: 상장주식 대비 비율의 증감(%p) · 증감 금액: 증감 수량 × 현재 종가(추정) · 주가: 같은 기간 종가 등락률 · 연속: 잔고가 연속으로 늘어난(+)/줄어든(−) 거래일 수<br>
+  <b>출처</b> · 대차: 한국예탁결제원 자료(금융위원회 공공데이터 '주식대차거래정보', 기준일 다음 영업일 13시 이후 갱신) · 공매도 잔고·주가: 한국거래소 정보데이터시스템. 공매도 잔고는 보고 시차가 있어 기준일이 대차보다 늦을 수 있습니다.<br>
+  <b>유의</b> · 소형주는 잔고가 작아 변화율이 크게 튈 수 있어 최소 잔고 필터를 둡니다. 직전 잔고가 0이던 종목은 '신규'로 표시하고 변화율 정렬에서 뺍니다. 투자 판단의 참고 자료이며 정확성을 보장하지 않습니다.
+</div>
+</div>
+
+<script>
+const $ = id => document.getElementById(id);
+const esc = s => String(s).replace(/[&<>"]/g, c => ({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;"}[c]));
+const KIND_NAME = {lend:"대차", short:"공매도", credit:"신용융자"};
+const MK = {K:"코스피", Q:"코스닥"};
+const TOP_N = 20, MORE_N = 50;
+let expanded = false;
+let D = null, st = {kind:"lend", p:1, s:"pct", m:"all", f:1e8, q:""}, open = null, dChart = null, tChart = null;
+const histCache = {};
+
+const fmtD = d => d ? `${d.slice(0,4)}.${d.slice(4,6)}.${d.slice(6)}` : "-";
+const sgn = (v, n=2) => v == null ? "-" : (v > 0 ? "+" : "") + v.toFixed(n);
+const cls = v => v == null || v === 0 ? "" : (v > 0 ? "up" : "down");
+function won(v){
+  const a = Math.abs(v), s = v < 0 ? "-" : "";
+  if (a >= 1e12) return s + (a/1e12).toFixed(2) + "조";
+  if (a >= 1e8) return s + Math.round(a/1e8).toLocaleString() + "억";
+  if (a >= 1e4) return s + Math.round(a/1e4).toLocaleString() + "만";
+  return s + Math.round(a).toLocaleString();
+}
+const shares = v => Math.abs(v) >= 1e4 ? (v/1e4).toFixed(Math.abs(v) >= 1e6 ? 0 : 1) + "만주" : v.toLocaleString() + "주";
+
+// 행 구조: [code,name,mkt,qty,amt,ratio, (dq,pct,dratio,pxp)×기간, streak]
+const pIdx = p => 6 + D.periods.indexOf(p) * 4;
+function rowObj(r){
+  const b = pIdx(st.p);
+  const price = r[3] ? r[4] / r[3] : 0;
+  return {code:r[0], name:r[1], mkt:r[2], qty:r[3], amt:r[4], ratio:r[5],
+    dq:r[b], pct:r[b+1], dratio:r[b+2], pxp:r[b+3], damt:r[b] == null ? null : r[b] * price,
+    streak:r[r.length-1], raw:r};
+}
+
+async function load(){
+  try{
+    const res = await fetch("data/latest.json?t=" + Date.now());
+    if (!res.ok) throw new Error(res.status);
+    D = await res.json();
+  }catch(e){
+    $("boards").innerHTML = '<div class="empty">아직 데이터가 없습니다. 첫 수집이 끝나면 표시됩니다.</div>';
+    $("asof").textContent = "데이터 준비 중"; return;
+  }
+  const k = D.kinds;
+  $("asof").innerHTML = `대차 기준 <b>${fmtD(k.lend && k.lend.asof)}</b><br>공매도 기준 <b>${fmtD(k.short && k.short.asof)}</b><br><span style="font-size:13px">갱신 ${esc(D.generated_at.replace("T"," ").slice(0,16))}</span>`;
+  if (!k.lend && k.short) st.kind = "short";
+  buildPeriods(); renderSum(); render(); renderTotals();
+}
+
+function buildPeriods(){
+  $("segP").innerHTML = D.periods.map(p => `<button data-v="${p}" aria-pressed="${p===st.p}">${p}일</button>`).join("");
+}
+
+function seriesChange(arr, k){
+  const v = arr.filter(x => x != null);
+  if (v.length <= k) return null;
+  const a = v[v.length-1], b = v[v.length-1-k];
+  return b ? (a/b - 1) * 100 : null;
+}
+function lastVal(arr){ for (let i = arr.length-1; i >= 0; i--) if (arr[i] != null) return [arr[i], i]; return [null, -1]; }
+
+function renderSum(){
+  const t = D.totals, cells = [];
+  for (const kind of ["lend","short"]){
+    const s = t[kind];
+    if (!s || !D.kinds[kind]){ cells.push(`<div><span>${KIND_NAME[kind]} 잔고 총액</span><strong class="muted">준비 중</strong></div>`, `<div><span>${KIND_NAME[kind]} 잔고 / 시가총액</span><strong class="muted">-</strong></div>`); continue; }
+    const sum = s.K.map((v,i) => v == null ? null : v + (s.Q[i] || 0));
+    const [last, li] = lastVal(sum);
+    const ch = seriesChange(sum, 20);
+    const mc = t.mcap.K[li] + t.mcap.Q[li];
+    cells.push(`<div><span>${KIND_NAME[kind]} 잔고 총액 · 20일 변화</span><strong>${won(last)}</strong><em class="${cls(ch)}">${ch == null ? "" : sgn(ch,1) + "%"}</em></div>`);
+    cells.push(`<div><span>${KIND_NAME[kind]} 잔고 / 시가총액</span><strong>${(last/mc*100).toFixed(2)}%</strong></div>`);
+  }
+  $("sum").innerHTML = cells.join("");
+}
+
+function filtered(){
+  const kd = D.kinds[st.kind];
+  if (!kd) return null;
+  const q = st.q.trim().toLowerCase();
+  return kd.rows.map(rowObj).filter(o =>
+    (st.m === "all" || o.mkt === st.m) &&
+    (!q || o.name.toLowerCase().includes(q) || o.code.includes(q)) &&
+    (q || o.amt >= st.f || (o.damt != null && Math.abs(o.damt) >= st.f)));
+}
+
+function sortKey(o){
+  if (st.s === "pct") return o.pct;
+  if (st.s === "ratio") return o.dratio;
+  if (st.s === "streak") return o.streak || null;
+  return o.damt;
+}
+const SORT_DESC = {
+  pct:"왼쪽은 잔고가 가장 많이 늘어난 비율 순, 오른쪽은 가장 많이 줄어든 비율 순입니다.",
+  ratio:"상장주식 대비 잔고 비율이 가장 크게 오른(왼쪽)·내린(오른쪽) 순입니다. 소형주 왜곡이 적습니다.",
+  amt:"증감 수량 × 현재가로 본 금액이 가장 큰 순입니다. 대형주 위주로 나옵니다.",
+  streak:"잔고가 며칠 연속 늘어난(왼쪽)·줄어든(오른쪽) 순입니다. 추세가 이어지는 종목을 찾을 때 씁니다."
+};
+
+function headRow(){
+  const u = (k, t) => st.s === k ? `<u>${t}</u>` : t;
+  return `<tr><th>#</th><th>종목</th><th>상장주식<br>대비</th><th>${st.p}일<br>${u("pct","변화율")}</th><th class="c-ratio2">${u("ratio","비율<br>변화")}</th><th class="c-amt">${u("amt","증감<br>금액")}</th><th class="c-st">${u("streak","연속")}</th><th>${st.p}일<br>주가</th></tr>`;
+}
+
+function rowHtml(o, i){
+  const pctTxt = o.pct == null ? (o.dq > 0 ? '<span class="new">신규</span>' : "-") : sgn(o.pct,1) + "%";
+  const stTxt = o.streak ? `${o.streak>0?"+":"−"}${Math.abs(o.streak)}일` : "-";
+  return `<tr class="row${open===o.code?" open":""}" tabindex="0" data-code="${o.code}">
+    <td class="rk">${i+1}</td>
+    <td class="nm" title="${esc(o.name)}">${esc(o.name)}<span class="mk">${MK[o.mkt]||""}</span></td>
+    <td>${o.ratio.toFixed(2)}%</td>
+    <td class="${st.s==="pct"?"key ":""}${o.pct==null?"":(o.dq>0?"down":"up")}">${pctTxt}</td>
+    <td class="c-ratio2 ${st.s==="ratio"?"key":""}">${o.dratio==null?"-":sgn(o.dratio,2)}</td>
+    <td class="c-amt ${st.s==="amt"?"key":""}">${o.damt==null?"-":(o.damt>0?"+":"")+won(o.damt)}</td>
+    <td class="c-st ${st.s==="streak"?"key ":""}${o.streak>0?"down":o.streak<0?"up":""}">${stTxt}</td>
+    <td class="${cls(o.pxp)}">${o.pxp==null?"-":sgn(o.pxp,1)+"%"}</td></tr>`;
+}
+
+function board(cl, title, sub, list){
+  const body = list.length ? list.map(rowHtml).join("") : `<tr><td colspan="8" class="empty">해당 종목이 없습니다.</td></tr>`;
+  return `<div class="board ${cl}"><h2><span>${title}</span><small>${sub}</small></h2><table><thead>${headRow()}</thead><tbody>${body}</tbody></table></div>`;
+}
+
+function setBoards(cls, html){
+  $("boards").className = cls + " s-" + st.s;
+  $("boards").innerHTML = html;
+}
+
+function render(){
+  document.querySelectorAll(".kinds button").forEach(b => b.setAttribute("aria-selected", b.dataset.kind === st.kind));
+  $("sortDesc").textContent = SORT_DESC[st.s];
+  const isCredit = st.kind === "credit";
+  $("ctrlArea").style.display = isCredit ? "none" : "";
+  if (isCredit){
+    closeDetail();
+    setBoards("boards single", `<div class="soonbox"><b>신용융자 종목별 순위는 준비 중입니다.</b><br>종목별 신용잔고는 증권사 API(계좌 필요)로만 받을 수 있어 1단계에서는 제외했습니다.<br>계좌 없이 받을 수 있는 공개 출처가 확인되면 같은 좌우 표로 추가합니다.</div>`);
+    return;
+  }
+  const kd = D.kinds[st.kind];
+  if (!kd){
+    closeDetail();
+    setBoards("boards single", `<div class="soonbox">${KIND_NAME[st.kind]} 데이터가 아직 없습니다.${st.kind==="lend" && !D.lend_key ? "<br>공공데이터포털 인증키(DATA_GO_KR_KEY)를 등록하면 수집됩니다." : "<br>첫 수집이 끝나면 표시됩니다."}</div>`);
+    return;
+  }
+  const rows = filtered();
+  if (kd.n_days <= st.p){
+    setBoards("boards single", `<div class="soonbox">${st.p}일 변화율은 데이터가 ${st.p+1}거래일 이상 쌓이면 표시됩니다. (현재 ${kd.n_days}거래일)</div>`);
+    return;
+  }
+  const lim = expanded ? MORE_N : TOP_N;
+  let html, canMore = false;
+  if (st.q.trim()){
+    const all = rows.sort((a,b) => b.amt - a.amt);
+    canMore = all.length > TOP_N;
+    html = board("find", `검색 결과 ${all.length}건`, `${KIND_NAME[st.kind]} 잔고 금액 순`, all.slice(0, lim));
+    setBoards("boards single", html);
+  } else {
+    const valid = rows.filter(o => sortKey(o) != null);
+    const incAll = valid.filter(o => sortKey(o) > 0).sort((a,b) => sortKey(b) - sortKey(a) || b.amt - a.amt);
+    const decAll = valid.filter(o => sortKey(o) < 0).sort((a,b) => sortKey(a) - sortKey(b) || b.amt - a.amt);
+    canMore = incAll.length > TOP_N || decAll.length > TOP_N;
+    const nInc = rows.filter(o => o.dq > 0).length, nDec = rows.filter(o => o.dq < 0).length;
+    setBoards("boards",
+      board("inc", `▲ ${KIND_NAME[st.kind]} 잔고 증가 상위`, `하락 압력 주의 · ${nInc.toLocaleString()}종목 증가`, incAll.slice(0, lim)) +
+      board("dec", `▼ ${KIND_NAME[st.kind]} 잔고 감소 상위`, `상승 여건 · ${nDec.toLocaleString()}종목 감소`, decAll.slice(0, lim)));
+  }
+  $("moreBtn").style.display = canMore ? "" : "none";
+  $("moreBtn").textContent = expanded ? `▲ ${TOP_N}위까지 접기` : `▼ ${MORE_N}위까지 펼치기`;
+  if (open && !document.querySelector(`tr.row[data-code="${open}"]`) && !kd.rows.some(x => x[0] === open)) closeDetail();
+  else if (open) showDetail(open, false);
+}
+
+function bucketOf(code){ let s = 0; for (const c of code) s += c.charCodeAt(0); return s % D.n_bucket; }
+
+function closeDetail(){
+  open = null;
+  $("detail").className = ""; $("detail").innerHTML = "";
+  if (dChart){ dChart.destroy(); dChart = null; }
+  document.querySelectorAll("tr.row.open").forEach(x => x.classList.remove("open"));
+}
+
+async function showDetail(code, scroll){
+  const kd = D.kinds[st.kind];
+  const r = kd && kd.rows.find(x => x[0] === code); if (!r){ closeDetail(); return; }
+  const o = rowObj(r);
+  document.querySelectorAll("tr.row").forEach(x => x.classList.toggle("open", x.dataset.code === code));
+  const per = D.periods.map(p => { const b = pIdx(p); const v = r[b+1]; return `<div>${p}일 변화율<b class="${v==null?"":(v>0?"down":"up")}">${v==null?(r[b]>0?"신규":"-"):sgn(v,1)+"%"}</b></div>`; }).join("");
+  const box = $("detail");
+  if (dChart){ dChart.destroy(); dChart = null; }
+  box.innerHTML = `<div class="dh"><h3>${esc(o.name)}</h3><span class="muted">${o.code} · ${MK[o.mkt]||""} · ${KIND_NAME[st.kind]} 기준 ${fmtD(kd.asof)}</span><button class="x" id="dClose">닫기 ✕</button></div>
+    <div class="dgrid">
+    <div>${KIND_NAME[st.kind]} 잔고<b>${shares(o.qty)}</b></div>
+    <div>잔고 금액<b>${won(o.amt)}</b></div>
+    <div>상장주식 대비<b>${o.ratio.toFixed(2)}%</b></div>
+    <div>연속 ${o.streak>=0?"증가":"감소"}<b class="${o.streak>0?"down":o.streak<0?"up":""}">${Math.abs(o.streak)}일</b></div>${per}</div>
+    <div class="cw"><canvas aria-label="${esc(o.name)} 잔고와 주가 추이"></canvas></div>
+    <a class="dlink" href="https://finance.naver.com/item/main.naver?code=${code}" target="_blank" rel="noopener">네이버 증권에서 ${esc(o.name)} 보기 ↗</a>`;
+  box.className = "on";
+  $("dClose").onclick = closeDetail;
+  if (scroll) box.scrollIntoView({behavior:"smooth", block:"start"});
+  const b = bucketOf(code);
+  try{
+    if (!histCache[b]){ const res = await fetch(`data/hist/${String(b).padStart(2,"0")}.json?t=${D.generated_at}`); histCache[b] = await res.json(); }
+  }catch(e){ return; }
+  const H = histCache[b], h = H.codes[code];
+  if (!h || open !== code) return;
+  const labels = H.days.map(d => `${d.slice(4,6)}/${d.slice(6)}`);
+  const ds = [];
+  if (h.l) ds.push({label:"대차 잔고(주)", data:h.l, borderColor:"#043B72", backgroundColor:"#043B72", yAxisID:"y", borderWidth:2, pointRadius:0, spanGaps:true});
+  if (h.s) ds.push({label:"공매도 잔고(주)", data:h.s, borderColor:"#F58220", backgroundColor:"#F58220", yAxisID:"y", borderWidth:2, pointRadius:0, spanGaps:true});
+  ds.push({label:"종가(원)", data:h.c, borderColor:"#9aa3b0", backgroundColor:"#9aa3b0", yAxisID:"y1", borderWidth:1.5, borderDash:[4,3], pointRadius:0, spanGaps:true});
+  if (dChart) dChart.destroy();
+  dChart = new Chart(box.querySelector("canvas"), {type:"line", data:{labels, datasets:ds},
+    options:{maintainAspectRatio:false, interaction:{mode:"index", intersect:false},
+      plugins:{legend:{labels:{boxWidth:12, font:{size:13}}}, tooltip:{callbacks:{label:c => `${c.dataset.label}: ${c.parsed.y==null?"-":Math.round(c.parsed.y).toLocaleString()}`}}},
+      scales:{x:{ticks:{maxTicksLimit:10, font:{size:12}}}, y:{position:"left", ticks:{font:{size:12}, callback:v => shares(v)}}, y1:{position:"right", grid:{drawOnChartArea:false}, ticks:{font:{size:12}}}}}});
+}
+
+function renderTotals(){
+  const t = D.totals, labels = D.days.map(d => `${d.slice(4,6)}/${d.slice(6)}`);
+  const tot = k => t[k] ? t[k].K.map((v,i) => v == null ? null : (v + (t[k].Q[i]||0)) / 1e12) : [];
+  const ds = [];
+  if (D.kinds.lend) ds.push({label:"대차 잔고(조원)", data:tot("lend"), borderColor:"#043B72", backgroundColor:"#043B72", borderWidth:2, pointRadius:0, spanGaps:true, yAxisID:"y"});
+  if (D.kinds.short) ds.push({label:"공매도 잔고(조원)", data:tot("short"), borderColor:"#F58220", backgroundColor:"#F58220", borderWidth:2, pointRadius:0, spanGaps:true, yAxisID:"y1"});
+  if (!ds.length){ $("totBox").style.display = "none"; return; }
+  tChart = new Chart($("totChart"), {type:"line", data:{labels, datasets:ds},
+    options:{maintainAspectRatio:false, interaction:{mode:"index", intersect:false},
+      plugins:{legend:{labels:{boxWidth:12, font:{size:13}}}, tooltip:{callbacks:{label:c => `${c.dataset.label}: ${c.parsed.y==null?"-":c.parsed.y.toFixed(2)}`}}},
+      scales:{x:{ticks:{maxTicksLimit:10, font:{size:12}}}, y:{position:"left", title:{display:true, text:"대차(조원)"}}, y1:{position:"right", grid:{drawOnChartArea:false}, title:{display:true, text:"공매도(조원)"}}}}});
+}
+
+function segBind(id, key, conv){
+  $(id).addEventListener("click", e => {
+    const b = e.target.closest("button"); if (!b) return;
+    $(id).querySelectorAll("button").forEach(x => x.setAttribute("aria-pressed", x === b));
+    st[key] = conv ? conv(b.dataset.v) : b.dataset.v; render();
+  });
+}
+segBind("segP", "p", Number); segBind("segS", "s"); segBind("segM", "m"); segBind("segF", "f", Number);
+document.querySelector(".kinds").addEventListener("click", e => {
+  const b = e.target.closest("button"); if (!b || !D) return;
+  st.kind = b.dataset.kind; closeDetail(); render();
+});
+$("q").addEventListener("input", e => { st.q = e.target.value; render(); });
+$("moreBtn").addEventListener("click", () => {
+  expanded = !expanded; render();
+  if (!expanded) $("boards").scrollIntoView({behavior:"smooth", block:"start"});
+});
+$("boards").addEventListener("click", e => {
+  const tr = e.target.closest("tr.row"); if (!tr) return;
+  const code = tr.dataset.code;
+  if (open === code){ closeDetail(); return; }
+  open = code; showDetail(code, true);
+});
+$("boards").addEventListener("keydown", e => { if (e.key === "Enter" && e.target.matches("tr.row")) e.target.click(); });
+load();
+</script>
+</body>
+</html>

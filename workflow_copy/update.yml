@@ -1,0 +1,44 @@
+name: update-credit-loan
+
+on:
+  schedule:
+    - cron: "0 10 * * 1-5"    # 19:00 KST Mon-Fri
+    - cron: "20 22 * * 0-4"   # 07:20 KST Tue-Sat (re-check)
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+concurrency:
+  group: credit-loan
+  cancel-in-progress: false
+
+jobs:
+  update:
+    runs-on: ubuntu-latest
+    timeout-minutes: 40
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+
+      - name: Install
+        run: pip install -U -r requirements.txt
+
+      - name: Fetch data
+        env:
+          KRX_ID: ${{ secrets.KRX_ID }}
+          KRX_PW: ${{ secrets.KRX_PW }}
+          DATA_GO_KR_KEY: ${{ secrets.DATA_GO_KR_KEY }}
+          TZ: Asia/Seoul
+        run: python scripts/fetch_credit_loan.py
+
+      - name: Commit
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "github-actions[bot]@users.noreply.github.com"
+          git add data
+          git diff --cached --quiet || git commit -m "data: credit-loan $(date +%Y-%m-%d)"
+          git push
