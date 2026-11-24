@@ -148,7 +148,16 @@ def fetch_lend(d):
     out, page, km, total = {}, 1, None, None
     while True:
         params = {"serviceKey": DGK, "pageNo": page, "numOfRows": 1000, "resultType": "json", "basDt": d}
-        r = requests.get(LEND_URL, params=params, timeout=40)
+        r = None
+        for attempt in range(3):  # 공공데이터포털 응답 지연 대비 재시도
+            try:
+                r = requests.get(LEND_URL, params=params, timeout=90)
+                break
+            except requests.exceptions.RequestException as e:
+                print(f"[retry] lend {d} p{page} ({attempt + 1}/3): {e}")
+                time.sleep(5 * (attempt + 1))
+        if r is None:
+            raise RuntimeError(f"대차 API 응답 없음 {d} p{page}")
         try:
             js = r.json()
         except ValueError:
@@ -237,7 +246,7 @@ def collect_days():
             if kind == "lend" and not DGK:
                 continue
             tries = rec.setdefault("tries", {}).get(kind, 0)
-            if tries >= MAX_TRIES or (tries >= 1 and age > RETRY_DAYS):
+            if tries >= MAX_TRIES or (tries >= 3 and age > RETRY_DAYS):
                 continue
             print(f"[{kind}] {d}")
             try:
